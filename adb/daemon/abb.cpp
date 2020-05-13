@@ -17,7 +17,6 @@
 #include <sys/wait.h>
 
 #include <android-base/cmsg.h>
-#include <android-base/strings.h>
 #include <cmd.h>
 
 #include "adb.h"
@@ -88,9 +87,9 @@ int main(int argc, char* const argv[]) {
 
         std::string_view name = data;
         auto protocol = SubprocessProtocol::kShell;
-        if (android::base::ConsumePrefix(&name, "abb:")) {
+        if (ConsumePrefix(&name, "abb:")) {
             protocol = SubprocessProtocol::kShell;
-        } else if (android::base::ConsumePrefix(&name, "abb_exec:")) {
+        } else if (ConsumePrefix(&name, "abb_exec:")) {
             protocol = SubprocessProtocol::kNone;
         } else {
             LOG(FATAL) << "Unknown command prefix for abb: " << data;

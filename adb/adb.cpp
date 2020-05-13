@@ -1052,9 +1052,9 @@ HostRequestResult handle_host_request(std::string_view service, TransportType ty
         // New transport selection protocol:
         // This is essentially identical to the previous version, except it returns the selected
         // transport id to the caller as well.
-        if (android::base::ConsumePrefix(&service, "tport:")) {
+        if (ConsumePrefix(&service, "tport:")) {
             legacy = false;
-            if (android::base::ConsumePrefix(&service, "serial:")) {
+            if (ConsumePrefix(&service, "serial:")) {
                 serial_storage = service;
                 serial = serial_storage.c_str();
             } else if (service == "usb") {
@@ -1068,7 +1068,7 @@ HostRequestResult handle_host_request(std::string_view service, TransportType ty
             // Selection by id is unimplemented, since you obviously already know the transport id
             // you're connecting to.
         } else {
-            if (android::base::ConsumePrefix(&service, "transport-id:")) {
+            if (ConsumePrefix(&service, "transport-id:")) {
                 if (!ParseUint(&transport_id, service)) {
                     SendFail(reply_fd, "invalid transport id");
                     return HostRequestResult::Handled;
@@ -1079,7 +1079,7 @@ HostRequestResult handle_host_request(std::string_view service, TransportType ty
                 type = kTransportLocal;
             } else if (service == "transport-any") {
                 type = kTransportAny;
-            } else if (android::base::ConsumePrefix(&service, "transport:")) {
+            } else if (ConsumePrefix(&service, "transport:")) {
                 serial_storage = service;
                 serial = serial_storage.c_str();
             }
@@ -1220,7 +1220,7 @@ HostRequestResult handle_host_request(std::string_view service, TransportType ty
     }
 
     // Indicates a new emulator instance has started.
-    if (android::base::ConsumePrefix(&service, "emulator:")) {
+    if (ConsumePrefix(&service, "emulator:")) {
         unsigned int port;
         if (!ParseUint(&port, service)) {
           LOG(ERROR) << "received invalid port for emulator: " << service;

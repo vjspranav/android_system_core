@@ -226,13 +226,48 @@ asocket* host_service_to_socket(std::string_view name, std::string_view serial,
         return create_device_tracker(false);
     } else if (name == "track-devices-l") {
         return create_device_tracker(true);
-    } else if (android::base::ConsumePrefix(&name, "wait-for-")) {
-        std::string spec(name);
-        unique_fd fd =
-                create_service_thread("wait", std::bind(wait_service, std::placeholders::_1,
-                                                        std::string(serial), transport_id, spec));
+    } else if (ConsumePrefix(&name, "wait-for-")) {
+        std::shared_ptr<state_info> sinfo = std::make_shared<state_info>();
+        if (sinfo == nullptr) {
+            fprintf(stderr, "couldn't allocate state_info: %s", strerror(errno));
+            return nullptr;
+        }
+
+        sinfo->serial = serial;
+        sinfo->transport_id = transport_id;
+
+        if (ConsumePrefix(&name, "local")) {
+            sinfo->transport_type = kTransportLocal;
+        } else if (ConsumePrefix(&name, "usb")) {
+            sinfo->transport_type = kTransportUsb;
+        } else if (ConsumePrefix(&name, "any")) {
+            sinfo->transport_type = kTransportAny;
+        } else {
+            return nullptr;
+        }
+
+        if (name == "-device") {
+            sinfo->state = kCsDevice;
+        } else if (name == "-recovery") {
+            sinfo->state = kCsRecovery;
+        } else if (name == "-rescue") {
+            sinfo->state = kCsRescue;
+        } else if (name == "-sideload") {
+            sinfo->state = kCsSideload;
+        } else if (name == "-bootloader") {
+            sinfo->state = kCsBootloader;
+        } else if (name == "-any") {
+            sinfo->state = kCsAny;
+        } else if (name == "-disconnect") {
+            sinfo->state = kCsOffline;
+        } else {
+            return nullptr;
+        }
+
+        unique_fd fd = create_service_thread(
+                "wait", [sinfo](unique_fd fd) { wait_for_state(std::move(fd), sinfo.get()); });
         return create_local_socket(std::move(fd));
-    } else if (android::base::ConsumePrefix(&name, "connect:")) {
+    } else if (ConsumePrefix(&name, "connect:")) {
         std::string host(name);
         unique_fd fd = create_service_thread(
                 "connect", std::bind(connect_service, std::placeholders::_1, host));
