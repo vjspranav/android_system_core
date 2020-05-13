@@ -37,7 +37,7 @@ FstabEntry* GetEntryForPath(Fstab* fstab, const std::string& path) {
     if (path.empty()) return nullptr;
     std::string str(path);
     while (true) {
-        auto entry = GetEntryForMountPoint(fstab, str);
+        auto entry = GetEntryForMountPointTryDetectFs(fstab, str);
         if (entry != nullptr) return entry;
         if (str == "/") break;
         auto slash = str.find_last_of('/');
@@ -101,7 +101,9 @@ bool EnsurePathMounted(Fstab* fstab, const std::string& path, const std::string&
         }
     }
 
-    auto mounted = GetMountState(rec->mount_point);
+    const std::string mount_point = mount_pt.empty() ? rec->mount_point : mount_pt;
+
+    auto mounted = GetMountState(mount_point);
     if (mounted == MountState::ERROR) {
         return false;
     }
@@ -109,15 +111,15 @@ bool EnsurePathMounted(Fstab* fstab, const std::string& path, const std::string&
         return true;
     }
 
-    const std::string mount_point = mount_pt.empty() ? rec->mount_point : mount_pt;
-
     static const std::vector<std::string> supported_fs{"ext4", "squashfs", "vfat", "f2fs", "none"};
     if (std::find(supported_fs.begin(), supported_fs.end(), rec->fs_type) == supported_fs.end()) {
         LERROR << "unknown fs_type \"" << rec->fs_type << "\" for " << mount_point;
         return false;
     }
 
-    if (fs_mgr_do_mount_one(*rec, mount_point) == -1) {
+    int result = fs_mgr_do_mount_one(*rec, mount_point);
+
+    if (result == -1) {
         PERROR << "Failed to mount " << mount_point;
         return false;
     }

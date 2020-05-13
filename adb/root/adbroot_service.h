@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 The Android Open Source Project
+ * Copyright (C) 2019 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,29 +14,28 @@
  * limitations under the License.
  */
 
-#ifndef _INIT_PROPERTY_H
-#define _INIT_PROPERTY_H
+#pragma once
 
-#include <sys/socket.h>
-
-#include <string>
-
-#include "epoll.h"
+#include <android/adbroot/BnADBRootService.h>
+#include <binder/BinderService.h>
 
 namespace android {
-namespace init {
+namespace adbroot {
 
-static constexpr const char kRestoreconProperty[] = "selinux.restorecon_recursive";
+class ADBRootService : public BinderService<ADBRootService>, public BnADBRootService {
+  public:
+    ADBRootService();
 
-bool CanReadProperty(const std::string& source_context, const std::string& name);
+    static void Register();
 
-extern uint32_t (*property_set)(const std::string& name, const std::string& value);
+    binder::Status setEnabled(bool enabled) override;
+    binder::Status getEnabled(bool* _aidl_return) override;
 
-void property_init();
-void property_load_boot_defaults(bool load_debug_prop);
-void StartPropertyService(int* epoll_socket);
+    static char const* getServiceName() { return "adbroot_service"; }
+  private:
+    bool enabled_;
+    Mutex lock_;
+};
 
-}  // namespace init
+}  // namespace adbroot
 }  // namespace android
-
-#endif  /* _INIT_PROPERTY_H */
