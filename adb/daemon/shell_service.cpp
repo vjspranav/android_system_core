@@ -86,7 +86,6 @@
 #include <pty.h>
 #include <pwd.h>
 #include <sys/select.h>
-#include <sys/stat.h>
 #include <termios.h>
 
 #include <memory>
@@ -113,17 +112,6 @@
 #include "shell_protocol.h"
 
 namespace {
-
-static std::string GetShellPath() {
-    std::string shell = android::base::GetProperty("persist.sys.adb.shell", "");
-    struct stat st;
-
-    if (!shell.empty() && stat(shell.c_str(), &st) != -1) {
-        return shell;
-    }
-
-    return _PATH_BSHELL;
-}
 
 // Reads from |fd| until close or failure.
 std::string ReadAll(int fd) {
@@ -372,16 +360,13 @@ bool Subprocess::ForkAndExec(std::string* error) {
         }
 #endif
 
-        std::string sh_path = GetShellPath();
-
         if (command_.empty()) {
             // Spawn a login shell if we don't have a command.
-            execle(sh_path.c_str(), sh_path.c_str(), "-", nullptr, cenv.data());
+            execle(_PATH_BSHELL, "-" _PATH_BSHELL, nullptr, cenv.data());
         } else {
-            execle(sh_path.c_str(), sh_path.c_str(), "-c", command_.c_str(), nullptr, cenv.data());
+            execle(_PATH_BSHELL, _PATH_BSHELL, "-c", command_.c_str(), nullptr, cenv.data());
         }
-        WriteFdExactly(child_error_sfd,
-                       android::base::StringPrintf("Exec '%s' failed: ", sh_path.c_str()).c_str());
+        WriteFdExactly(child_error_sfd, "exec '" _PATH_BSHELL "' failed: ");
         WriteFdExactly(child_error_sfd, strerror(errno));
         child_error_sfd.reset(-1);
         _Exit(1);
